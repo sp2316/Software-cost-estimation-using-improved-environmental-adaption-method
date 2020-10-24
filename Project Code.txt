@@ -1,0 +1,206 @@
+
+import random
+import math
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df=pd.read_excel('Book1.xlsx',header=2)
+sample_dataset=[]
+Size= df['Size'].tolist()
+Meth=df['Methodlogy'].tolist()
+me=df['Measurd Effort'].tolist()
+sample_dataset=[]
+sample_dataset.append(Size)
+sample_dataset.append(Meth)
+sample_dataset.append(me)
+print(sample_dataset)
+
+#sample_dataset=[[90,46.2,46.5,54.5,31,67.5],[30,20,19,20,35,29],[115,96,79,90,39.6,98.4]]
+
+
+new_population=[]
+def generate():
+    #assigning random values for parameters(a,b,c,d)
+    #Search Domain for a {0, 10} Search Domain for b {0.3, 2} Search Domain for c {-0.5, 0.5} Search Domain for d {0, 20}. 
+    a=round(random.uniform(-5,5),3)
+    b=round(random.uniform(-5,5),3)
+    c=round(random.uniform(-5,5),3)
+    d=round(random.uniform(-5,5),3)
+    return a,b,c,d
+    
+    
+def get_length(sample_dataset):
+    #returns the number of data sets
+    return len(sample_dataset[0])
+    
+    
+def generate_dataset(l):
+    #generation of random values for Parameters (a,b,c,d) and creating Population Vectors
+    n=[]
+    for i in range(l):
+        n.append(list(generate()))
+    
+    return n
+    
+    
+def formula(l,size,methodology):
+    #Effort Calculation for each population using formula:EE = a×(DLOC)b + c×(M) + d
+    a,b,c,d=l[0],l[1],l[2],l[3]
+    temp=pow(size,b)
+    temp=a*temp+c*methodology+d
+    return round(temp,3)
+
+
+def generate_EE(data,dataset,l):
+    # Calculating Effort for all the projects  in data set      
+    EE=[]
+    for j in range(l):
+        temp=[]
+        for i in range(l):
+            temp.append(formula(data[j],dataset[0][i],dataset[1][i]))
+        
+        EE.append(temp)
+    
+    return EE    
+    
+def print_data(n):
+    for i in range(len(n)):
+        print(n[i],end="\n")
+        
+def generate_mre(me,ee):
+    #calculation of MRE(Magnitude of relative error)
+    mre=[]
+    for j in range(len(ee[0])):
+        temp=[]
+        for i in range(len(ee)):
+            
+            temp.append(round(abs((me[i]-ee[j][i])/me[i]),3))
+        mre.append(temp)    
+    return mre    
+def generate_mmre(mre):
+    #calculation of MMRE(Mean of Magnitude of relative error)
+    avg1=[]
+    for i in range(len(mre)):
+        av=round(sum(mre[i])/len(mre[i]),3)
+        avg1.append(av)
+        
+    
+    return avg1
+def find_avg(mmre):
+    #Fitness calculation(Average of MMRE)
+    for i in range(len(mmre)):
+        av=round(sum(mmre)/len(mmre),3)
+    return av
+def find_adaption(data,fit,avg,beta=0.5):
+    #Application of Adaption[ Pb+1 = Pb ×F(Pb)/Favg + β]  
+    temp=fit/avg
+    for i in range(len(data)):
+        data[i]=round(data[i]*temp,3)
+        data[i]=data[i]+beta
+        
+    return data
+def do_aternation(new_data,best_data,worst_data,beta=0.5):
+    #Offspring Generation [Pnb+1 = Pnb + β×(best_position−worst_position) ]
+    temp=[]
+    for i in range(len(best_data)):
+        temp.append(round(beta*(best_data[i]-worst_data[i]),3))
+    for i in range(len(new_data)):
+        for j in range(len(temp)):
+            new_data[i][j]=round(new_data[i][j]+temp[j],3)
+    return new_data        
+      
+def filterate(new_data,n):
+    data=new_data
+    for i in range(0,len(new_data)):
+        for j in range(0,n):
+            if new_data[i][j]<-5 or new_data[i][j]>5:
+                data[i][j]=round(random.uniform(-5,5),3)
+                
+    return data   
+
+def plot(best_fit_values):
+    best_fit_values=pd.DataFrame(best_fit_values)
+    best_fit_values.columns=['best_fit value']
+    df=best_fit_values
+    c=df.count()[0]
+    ax=df.plot(figsize=(10,8),markersize=22)
+    plt.scatter(x=list(range(0,c)),y=best_fit_values,s=80)
+    ax.set_title('Best fit values for every iteration',size=12)
+    plt.plot(df[9:], 'or')
+    ax.legend('')
+    plt.grid()
+    ax.set_xlabel('iterations',size=15)
+    ax.set_ylabel('best fit',size=15)
+    ax.tick_params(labelsize=14)
+    k=0
+    for i in df.values:
+        ax.annotate(str(i),(k,i+0.01),color='black')
+        k+=1
+    
+    
+                
+    
+
+def main():
+    bestfits=[]
+    best_param=[]
+    best_MMRE=[]
+    new_population=generate_dataset(get_length(sample_dataset))
+    print("------------Initial Population----------",end="\n")
+    print_data(new_population)
+    i=0 
+ 
+    best_fit=9999
+    pre_best=9999
+    while(i<10):
+        i=i+1
+        print("--------------EE calculated-----------",end="\n")
+        EE=generate_EE(new_population,sample_dataset,get_length(sample_dataset))
+        
+        print("--------------MRE calculated-------------",end="\n")
+        MRE=generate_mre(sample_dataset[2],EE)
+        MMRE=generate_mmre(MRE)
+        print("--------------MMRE calculated------------",end="\n")
+        pre_best=best_fit  
+        best_fit=min(MMRE)
+        best_MMRE.append(best_fit)
+        row_best=MMRE.index(best_fit)
+        print("best row =="+str(row_best))
+        best_data=new_population[row_best]
+        best_param.append(best_data)
+        average_fitness=round(find_avg(MMRE),3)
+        row_data=find_adaption(best_data,best_fit,average_fitness,0.5)
+        new_data=new_population
+        worst_fit=max(MMRE)
+        row_worst=MMRE.index(worst_fit)
+        worst_data=new_population[row_worst]
+        del new_data[row_best]
+        new_data=do_aternation(new_data,best_data,worst_data,0.5)
+        new_data.append(best_data)
+        print("NEWDATA______________________")
+        print(new_data)
+        print("-----------values---------------")
+        new_pop=row_data+new_data
+        print("data after iter:",i)
+        
+        new_population=filterate(new_data,get_length(new_data))
+        print(new_population)
+        bestfits.append(best_fit)
+        
+         
+   
+    print("Best MMRE=")
+    print(min(best_MMRE))
+    print("\nBest data\n")
+
+    print(best_param[best_MMRE.index(min(best_MMRE))])
+    print("\n")
+    plot(bestfits)
+    
+    
+    
+    
+  
+    
+    
+main() 
